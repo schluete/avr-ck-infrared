@@ -60,6 +60,8 @@ timer1:     in r20,SREG       ; Statusregister sichern und dann ...
             in r21,PORTB      ; jetzt die LEDs toggeln
             com r21
             out PORTB,r21
+
+            rcall send_rc5    ; Infrarot-Kommando senden
  
             rcall reload_t1   ; Timer wieder auf 250ms initialisieren
             out SREG,r20      ; Interrupts wieder einschalten
@@ -72,4 +74,95 @@ reload_t1:  ldi r16,0x85      ; der Timer soll alle 250ms auftreten, bei einem T
             ldi r16,0xed      ; ... Counter hochzaehlt und bei 0xffff ausloest schreiben wir als...
             out TCNT1L,r16    ; ... Startwert deshalb 0xffff-62500=0xbdb in den Timer
             ret
+
+
+            ; sendet einen einzelnen RC5-Befehl
+send_rc5:   rcall send_one    ; Start Bit
+            rcall send_one    ; Field Bit (Kommandos 64-127)
+            rcall send_zero   ; Control Bit (toggelt eigentlich jedes Mal)
+            rcall send_zero   ; fuenf Bits Adresse
+            rcall send_one
+            rcall send_zero
+            rcall send_one
+            rcall send_zero
+            rcall send_zero   ; sechs Bits Kommando
+            rcall send_one
+            rcall send_zero
+            rcall send_one
+            rcall send_zero
+            rcall send_one
+            ret
+
+
+            ; sendet eine 1 auf die Diode, d.h. 889us Signal, dann 889us Stille. Das
+            ; Signal hat 35% duty cycle, also 9us High, dann 17us Low
+send_one:   ldi r26,32        ; 1 cycle
+one1:       sbi PORTD,4       ; 2 cycles, 9us High
+            nop               ; 7 cycles
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            cbi PORTD,4       ; 2 cycles, 17us Low
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            dec r26           ; 1 cycle
+            brne one1         ; 2(1) cycles, damit braucht die Schleife 33*26us und 
+                              ; 25us im letzten Durchlauf, insgesamt also 883us
+            call delay        ; 4 cycles, jetzt 889us Stille
+            ret               ; 4 cycles
+            
+
+            ; sendet eine 1 auf die Diode, d.h. 889us Signal, dann 889us Stille. Das
+            ; Signal hat 35% duty cycle, also 9us High, dann 17us Low
+send_zero:  ldi r26,32        ; 1 cycle
+            call delay        ; 4 cycles, zuerst 889us Stille
+zero1:      sbi PORTD,4       ; 2 cycles, 9us High
+            nop               ; 7 cycles
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            cbi PORTD,4       ; 2 cycles, 17us Low
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            dec r26           ; 1 cycle
+            brne zero1        ; 2(1) cycles, damit braucht die Schleife 33*26us und 
+                              ; 25us im letzten Durchlauf, insgesamt also 883us
+            ret               ; 4 cycles
+
+
+            ; diese Routine muss genau 882us dauern (eigentlich 886us, aber wir
+            ; muessen noch irgendwo die 4us des Aufrufes von send_XXXX abziehen)
+delay:      ldi r26,220       ; 1 cycle
+delayloop:  nop               ; 1 cycle
+            dec r26           ; 1 cycle
+            brne delayloop    ; 2(1) cycles, die Schleife braucht 218*4us+3us
+            nop               ; 1 cycle
+            nop               ; 1 cycle
+            ret               ; 4 cycles, gesamt 4us+2us+1us+218*4us+3us 
 
