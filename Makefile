@@ -13,6 +13,7 @@ all: assemble upload
 
 assemble: 
 	$(AVRA) -l $(LIST) $(SOURCE)
+#	cat $(LIST)
 
 upload:
 	$(AVRDUDE) -C $(AVRDUDE_CONF) -c stk200 -p t2313 -e -U $(HEX)
