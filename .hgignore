@@ -3,4 +3,5 @@ syntax: regexp
 
 \.swp$
 ^archives/avra-1.2.3
+^archives/avrdude-5.8$
 
