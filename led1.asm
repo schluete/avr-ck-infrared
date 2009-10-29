@@ -9,11 +9,11 @@
           .equ PORTB=0x18
 
           .org 0
-reset:    rjmp  main
-
-main:     ldi r16,0xff
-          out DDRB,r16
-          ldi r16,0xaa
+main:     
+          ldi r16,0x0
           out PORTB,r16
+
+          ldi r16,0xff
+          out DDRB,r16
 
 loop:     rjmp loop
