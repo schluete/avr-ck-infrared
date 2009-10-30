@@ -54,7 +54,9 @@ main:       cli               ; Interrupts komplett ausschalten
             out PORTD,r16
 
             sei               ; Interrupt global einschalten
-loop:       rjmp loop         ; und dann im Hauptprogram nichts mehr machen
+loop:       cbi PORTD,3 
+            sbi PORTD,3
+            rjmp loop         ; und dann im Hauptprogram nichts mehr machen
 
 
             ; der Interupthandler fuer Timer 1
@@ -75,9 +77,9 @@ timer1:     in r20,SREG       ; Statusregister sichern und dann ...
 
             ; laedt den initialen TimerCount fuer 250ms
 reload_t1:  ldi r16,0x85      ; der Timer soll alle 250ms auftreten, bei einem Takt von 125kHz...
-            out TCNT1H,r16    ; ... (entspricht 8us) muessen wir also 62500 Zyklen warten. Da der... 
+            out TCNT1H,r16    ; ... (entspricht 8us) muessen wir also 31250 Zyklen warten. Da der... 
             ldi r16,0xed      ; ... Counter hochzaehlt und bei 0xffff ausloest schreiben wir als...
-            out TCNT1L,r16    ; ... Startwert deshalb 0xffff-62500=0xbdb in den Timer
+            out TCNT1L,r16    ; ... Startwert deshalb 0xffff-31250=0x85ed in den Timer
             ret
 
 
