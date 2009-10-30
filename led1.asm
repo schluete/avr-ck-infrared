@@ -17,6 +17,8 @@
             .equ TCNT1H=0x2d
             .equ TCNT1L=0x2c
 
+            .equ IR=4
+
 
             ; die Tabelle der Interuptvektoren
 vectors:    .org 0
@@ -32,9 +34,9 @@ vectors:    .org 0
             ; das Hauptprogram
 main:       cli               ; Interrupts komplett ausschalten
  
-            ldi r16,0x1f      ; die unteren 5 Bits von Port B sind Ausgaenge
+            ldi r16,0x1f      ; Port B.0-4 sind Ausgaenge, der Rest durch ISP belegt
             out DDRB,r16
-            ldi r16,0x00      ; Port D sind Eingaenge
+            ldi r16,0x1f      ; Port D.5-6 sind Eingaenge, der D.0-4 sind Ausgaenge
             out DDRD,r16
 
             ldi r16,0x00      ; aktuelle Interuptflags loeschen
@@ -48,6 +50,8 @@ main:       cli               ; Interrupts komplett ausschalten
 
             ldi r16,0xaa      ; ein Bitmuster auf die LEDs legen
             out PORTB,r16
+            ldi r16,0xff      ; und Port D ausschalten
+            out PORTD,r16
 
             sei               ; Interrupt global einschalten
 loop:       rjmp loop         ; und dann im Hauptprogram nichts mehr machen
@@ -62,6 +66,7 @@ timer1:     in r20,SREG       ; Statusregister sichern und dann ...
             out PORTB,r21
 
             rcall send_rc5    ; Infrarot-Kommando senden
+            ;cbi PORTD,IR
  
             rcall reload_t1   ; Timer wieder auf 250ms initialisieren
             out SREG,r20      ; Interrupts wieder einschalten
@@ -97,7 +102,7 @@ send_rc5:   rcall send_one    ; Start Bit
             ; sendet eine 1 auf die Diode, d.h. 889us Signal, dann 889us Stille. Das
             ; Signal hat 35% duty cycle, also 9us High, dann 17us Low
 send_one:   ldi r26,32        ; 1 cycle
-one1:       sbi PORTD,4       ; 2 cycles, 9us High
+one1:       cbi PORTD,IR      ; 2 cycles, 9us High
             nop               ; 7 cycles
             nop
             nop
@@ -105,7 +110,7 @@ one1:       sbi PORTD,4       ; 2 cycles, 9us High
             nop
             nop
             nop
-            cbi PORTD,4       ; 2 cycles, 17us Low
+            sbi PORTD,IR      ; 2 cycles, 17us Low
             nop
             nop
             nop
@@ -121,15 +126,15 @@ one1:       sbi PORTD,4       ; 2 cycles, 9us High
             dec r26           ; 1 cycle
             brne one1         ; 2(1) cycles, damit braucht die Schleife 33*26us und 
                               ; 25us im letzten Durchlauf, insgesamt also 883us
-            call delay        ; 4 cycles, jetzt 889us Stille
+            rcall delay       ; 4 cycles, jetzt 889us Stille
             ret               ; 4 cycles
             
 
             ; sendet eine 1 auf die Diode, d.h. 889us Signal, dann 889us Stille. Das
             ; Signal hat 35% duty cycle, also 9us High, dann 17us Low
 send_zero:  ldi r26,32        ; 1 cycle
-            call delay        ; 4 cycles, zuerst 889us Stille
-zero1:      sbi PORTD,4       ; 2 cycles, 9us High
+            rcall delay       ; 4 cycles, zuerst 889us Stille
+zero1:      cbi PORTD,IR      ; 2 cycles, 9us High
             nop               ; 7 cycles
             nop
             nop
@@ -137,7 +142,7 @@ zero1:      sbi PORTD,4       ; 2 cycles, 9us High
             nop
             nop
             nop
-            cbi PORTD,4       ; 2 cycles, 17us Low
+            sbi PORTD,IR      ; 2 cycles, 17us Low
             nop
             nop
             nop
