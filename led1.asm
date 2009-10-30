@@ -8,6 +8,7 @@
             .equ DDRB=0x17
             .equ PORTB=0x18
 
+            .equ MCUCR=0x35
             .equ SREG=0x3f
   
             .equ TIMSK=0x39
@@ -53,10 +54,12 @@ main:       cli               ; Interrupts komplett ausschalten
             ldi r16,0xff      ; und Port D ausschalten
             out PORTD,r16
 
+            ldi r17,0x20      ; Sleep Mode Enable Bit setzen
+            out MCUCR,r17
             sei               ; Interrupt global einschalten
-loop:       cbi PORTD,3 
-            sbi PORTD,3
-            rjmp loop         ; und dann im Hauptprogram nichts mehr machen
+loop:       sleep             ; in den Idle-Mode
+            out MCUCR,r17     ; nach einem Interrupt landen wir hier, wieder den Idle-Mode
+            rjmp loop         ; vorbereiten und dann wieder schlafen legen
 
 
             ; der Interupthandler fuer Timer 1
@@ -68,7 +71,6 @@ timer1:     in r20,SREG       ; Statusregister sichern und dann ...
             out PORTB,r21
 
             rcall send_rc5    ; Infrarot-Kommando senden
-            ;cbi PORTD,IR
  
             rcall reload_t1   ; Timer wieder auf 250ms initialisieren
             out SREG,r20      ; Interrupts wieder einschalten
