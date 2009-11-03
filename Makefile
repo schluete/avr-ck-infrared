@@ -4,7 +4,8 @@ AVRDUDE=        ./bin/avrdude
 AVRDUDE_CONF=   ./bin/avrdude.conf
 
 
-SOURCE=         led1.asm
+#SOURCE=         led1.asm
+SOURCE=         pwm.asm
 HEX=            $(SOURCE:%.asm=%.hex)
 LIST=           $(SOURCE:%.asm=%.lst)
 
@@ -20,6 +21,9 @@ upload:
 
 unfuse:
 	$(AVRDUDE) -C $(AVRDUDE_CONF) -c stk200 -p t2313 -U lfuse:w:0x64:m -U hfuse:w:0xdf:m -U efuse:w:0xff:m
+
+quartz:
+	$(AVRDUDE) -C $(AVRDUDE_CONF) -c stk200 -p t2313 -U lfuse:w:0x7d:m -U hfuse:w:0xdf:m -U efuse:w:0xff:m
 
 clean:
 	rm -r *.hex *.lst *.cof *.obj
