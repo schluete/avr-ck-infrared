@@ -26,19 +26,37 @@
             .equ OCR1AH=0x2b
             .equ OCR1AL=0x2a
 
+            ; beim RC5-Code wird jedes Bit des Codewortes durch zwei einzelne 
+            ; "Sendezeiten" dargestellt. Um den Code moeglichst einfach zu 
+            ; senden speichern wir deshalb jedes RC5-Bit in zwei Bits im 
+            ; Speicher. Zwei RC5-Bits ergeben also im Speicher ein Nibble 
+            ; und lassen sich sich als Hexwert so darstellen:
+            ;
+            ; RC5: 0 0 =>  Sendzeiten: 10 10 =>  Hexwert: 0xa
+            ;      0 1 =>              10 01 =>           0x9
+            ;      1 0 =>              01 10 =>           0x6
+            ;      1 1 =>              01 01 =>           0x5
+            ;
+            ; Das RC5-Codewort an sich besteht aus 15 Bits (2 Start, 1 Toggle,
+            ; 5 Adress- und 6 Datenbits). Die Startbits sind immer 1, das Toggle
+            ; sollte bei jedem Versand wechseln und die Daten sind frei. Ein 
+            ; Beispiel mit Adresse=0x5, Daten=0x35 (mit Codierung im Speicher):
+            ;
             ;     5     a     9     9     5     9     9  
             ; 01 01 10 10 10 01 10 01 01 01 10 01 10 01   
             ; 1  1  0  0  0  1  0  1  1  1  0  1  0  1  
             ; S1 S2 To A4 A3 A2 A1 A0 D5 D4 D3 D2 D1 D0 
-            ; means: Addr=0x5, Data=0x35
-            ; 
-            .equ CMD0=0x85
+            ;
+
+            .equ CMD0=0x05
             .equ CMD1=0xa9
             .equ CMD2=0x95
-            .equ CMD3=0x99
+            .equ CMD3=0xa6
 
 
+            ; --------------------------------------------------------------------------------------
             ; die Tabelle der Interuptvektoren
+            ; --------------------------------------------------------------------------------------
 vectors:    .org 0
             rjmp main         ; Reset
             reti              ; External Interrupt Request 0
@@ -76,7 +94,7 @@ main:       cli               ; Interrupts komplett ausschalten
             ; jetzt den IR-Code ins RAM schreiben
             ;
             ldi r31,0x00      ; wir schreiben den IR-Code ins SRAM ab 0x60
-            ldi r30,0x60
+            ldi r30,0xa0
             ldi r16,CMD0
             st z+,r16
             ldi r16,CMD1
@@ -102,6 +120,15 @@ main:       cli               ; Interrupts komplett ausschalten
             out OCR1AH,r16    ; als Takt am Ausgang OC1A 
             out OCR1AL,r17
 
+            ; 
+            ; als Einschaltmeldung einmal die LED flashen
+            ;
+            ldi r16,0x00
+            out PORTD,r16
+            rcall delay
+            ldi r16,0x00      ; Port D auf Eingaenge, dadurch Treiber ausschalten
+            out DDRD,r16      ; und Strom sparen
+
             ;
             ; und jetzt den Timer fuer die 889us starten
             ; 
@@ -111,29 +138,30 @@ main:       cli               ; Interrupts komplett ausschalten
 
             ldi r16,0xff
             out PORTD,r16
-forever2:   sbi PIND,4
 
-            ldi r20,1         ; wir wollen sofort ein Bit shiften
+forever:    ldi r20,1         ; wir wollen sofort ein Bit shiften
             ldi r21,5         ; insgesamt werden 4 Bytes versendet
             ldi r31,0x00      ; und diese stehen im SRAM ab 0x060
-            ldi r30,0x60
+            ldi r30,0xa0
             rcall start_t0    ; Timer 0 loslaufen lassen
 
-            rcall ldelay
-            rjmp forever2
+            rcall delay
+            rjmp forever
 
 
-            ;
+            ; --------------------------------------------------------------------------------------
             ; der Interrupt-Handler fuer Timer 0, liest das naechste Bit 
             ; fuer den IR-Datenstrom aus und starten den Sendevorgang
-            ;
-timer0:     ldi r16,0x00      ; Timer 0 stoppen
-            out TCCR0A,r16
-
-            dec r20           ; muessen wir das naechste Byte laden?
+            ; --------------------------------------------------------------------------------------
+timer0:     dec r20           ; muessen wir das naechste Byte laden?
             brne send_bit     ; nein, muessen wir noch nicht
             dec r21           ; haben wir schon vier Bytes versandt?
             brne load_byte
+
+done:       ldi r16,0x00      ; Timer 0 stoppen (einfach den Takt wegnehmen)
+            out TCCR0B,r16
+            ldi r16,0x03      ; PWM vom Port OC1A trennen (also ausschalten)
+            out TCCR1A,r16
             reti              ; das war's, zurueck ohne Timer-Neustart
 
 load_byte:  ld r19,z+         ; das naechste Byte aus dem Speicher einlesen
@@ -141,27 +169,20 @@ load_byte:  ld r19,z+         ; das naechste Byte aus dem Speicher einlesen
 
 send_bit:   lsl r19           ; das naechste Bit ins Carry schieben
             brcc is_clear     ; ist das Carry geloescht oder gesetzt?
-
-is_set:     cbi PORTB,0       ; DEBUG: led anschalten
-            ldi r16,0x43      ; PWM mit Port OC1A verbinden (also einschalten)
+is_set:     ldi r16,0x43      ; PWM mit Port OC1A verbinden (also einschalten)
             out TCCR1A,r16
             rjmp go_home      ; zum Schleifenende springen
-
-is_clear:   sbi PORTB,0       ; DEBUG: led ausschalten
-            ldi r16,0x03      ; PWM vom Port OC1A trennen (also ausschalten)
+is_clear:   ldi r16,0x03      ; PWM vom Port OC1A trennen (also ausschalten)
             out TCCR1A,r16
 
 go_home:    rcall start_t0    ; und Timer 0 wieder starten
             reti
 
 
-
-
-
-
-            ;
-            ;
-            ;
+            ; --------------------------------------------------------------------------------------
+            ; initialisiert und startet den Timer 0 so, das der Handler alle 
+            ; 888us aufgerufen wird, um dort das naechste Bit ausgeben zu koennen
+            ; --------------------------------------------------------------------------------------
 start_t0:   ldi r16,111       ; Output Compare bei 111 ergibt 1.126kHz=888us
             out OCR0A,r16
             ldi r16,0         ; Timer startet wieder bei 0
@@ -176,19 +197,16 @@ start_t0:   ldi r16,111       ; Output Compare bei 111 ergibt 1.126kHz=888us
             ; --------------------------------------------------------------------------------------
             ; wartet zum Debugging eine halbe Ewigkeit
             ; --------------------------------------------------------------------------------------
-ldelay:     ldi r26,5
-lsuper:     ldi r25,255
-louter:     ldi r24,255
-linner:     nop
+delay:      ldi r25,100
+outer:      ldi r24,255
+inner:      nop
             nop
             nop
             nop
             nop
             nop
             dec r24
-            brne linner
+            brne inner
             dec r25
-            brne louter
-            dec r26
-            brne lsuper
+            brne outer
             ret
