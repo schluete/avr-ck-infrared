@@ -1,0 +1,24 @@
+
+die Widerstaende im Kabel von jeweils 330 Ohm sind einzig 
+zur Strombegrenzung am PC-Port, wenn der AVR zu viel Spannung 
+(>3..5V) gefahren wird und haben ansonsten keine logische 
+Funktion beim Programmieren.
+
+Dieser Programmierstecker entspricht dem des originalen 
+Brenners "STK200" von Atmel und kann deshalb bspw. beim
+avrdude auch als "-c stk200" angesprochen werden.
+
+
+Parallel Port,
+SUB-D25 female                   AVR Atmel
+
+ 2     --> bridge Pin 12 SUB-D
+ 3     --> bridge Pin 11 SUB-D
+ 6     --------/\/\/\/----------> SCL/SCK
+ 7     --------/\/\/\/----------> MOSI
+ 9     --------/\/\/\/----------> RESET
+10     --------/\/\/\/----------> MISO
+11     --> bridge Pin 3 SUB-D
+12     --> bridge Pin 2 SUB-D
+20..25 -------------------------> GND
+
