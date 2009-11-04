@@ -1,0 +1,24 @@
+
+Pro Bake:
+
+1x AVR Atmel AT-Tiny-2313             154166-GS   2.21            
+1x Fassung DIL 20pol                  189545-GS   0.27
+1x LED                                180139-GS   0.16
+1x IR-Diode                           185809-GS   1.84
+1x Poti liegend 10k                   430862-GS   0.46
+1x Batteriehalter                     651043-LN   1.35           
+                                     ------------------
+                                                  6.29x20=125.80
+
+Allgemein:
+
+4x Eurokarte Lochraster               529593-GS   3.02 (12.08)
+2x Stiftreihe 2-Reihig                741306-GS   0.62 (1.24)
+1x 100er Widerstand 3k3 1/4 Watt      404101-GS   1.78
+                                     -------------------
+                                                  15.10
+                                                 125.80
+                                                --------
+                                                 140.90
+
+40x Batterie 1.5V
