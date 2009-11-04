@@ -4,8 +4,7 @@ AVRDUDE=        ./bin/avrdude
 AVRDUDE_CONF=   ./bin/avrdude.conf
 
 
-#SOURCE=         led1.asm
-SOURCE=         pwm.asm
+SOURCE=         infrared.asm
 HEX=            $(SOURCE:%.asm=%.hex)
 LIST=           $(SOURCE:%.asm=%.lst)
 
